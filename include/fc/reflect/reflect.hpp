@@ -65,6 +65,37 @@ struct reflector{
 
 void throw_bad_enum_cast( int64_t i, const char* e );
 void throw_bad_enum_cast( const char* k, const char* e );
+
+template <typename Class>
+struct reflector_verifier_visitor {
+   explicit reflector_verifier_visitor( Class& c )
+     : obj(c) {}
+
+   void reflector_verify() {
+      reflect_verify( obj );
+   }
+
+ private:
+
+   // int matches 0 if reflector_verify exists SFINAE
+   template<class T>
+   auto verify_imp(const T& t, int) -> decltype(t.reflector_verify(), void()) {
+      t.reflector_verify();
+   }
+
+   // if no reflector_verify method exists (SFINAE), 0 matches long
+   template<class T>
+   auto verify_imp(const T& t, long) -> decltype(t, void()) {}
+
+   template<typename T>
+   auto reflect_verify(const T& t) -> decltype(verify_imp(t, 0), void()) {
+      verify_imp(t, 0);
+   }
+
+ protected:
+   Class& obj;
+};
+
 } // namespace fc
 
 
@@ -75,16 +106,16 @@ void throw_bad_enum_cast( const char* k, const char* e );
 
 
 #ifndef _MSC_VER
-  #define TEMPLATE template
+  #define FC_TEMPLATE template
 #else
   // Disable warning C4482: nonstandard extention used: enum 'enum_type::enum_value' used in qualified name
   #pragma warning( disable: 4482 )
-  #define TEMPLATE
+  #define FC_TEMPLATE
 #endif
 
 #define FC_REFLECT_VISIT_MEMBER( r, visitor, elem ) \
-{ typedef decltype(((type*)nullptr)->elem) member_type;  \
-  visitor.TEMPLATE operator()<member_type,type,&type::elem>( BOOST_PP_STRINGIZE(elem) ); \
+{ typedef decltype((static_cast<type*>(nullptr))->elem) member_type;  \
+  visitor.FC_TEMPLATE operator()<member_type,type,&type::elem>( BOOST_PP_STRINGIZE(elem) ); \
 }
 
 
