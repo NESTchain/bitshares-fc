@@ -9,6 +9,11 @@
 #include <fc/exception/exception.hpp>
 #include "_digest_common.hpp"
 
+#ifdef USE_SM_CRYPTO
+#include <openssl/evp.h>
+#include <openssl/obj_mac.h>
+#endif
+
 namespace fc {
 
     sha256::sha256() { memset( _hash, 0, sizeof(_hash) ); }
@@ -30,10 +35,18 @@ namespace fc {
 
 
     struct sha256::encoder::impl {
-       SHA256_CTX ctx;
+#ifdef USE_SM_CRYPTO
+		EVP_MD_CTX* ctx;
+#else
+		SHA256_CTX ctx;
+#endif
     };
 
-    sha256::encoder::~encoder() {}
+    sha256::encoder::~encoder() {
+#ifdef USE_SM_CRYPTO
+		EVP_MD_CTX_free(my->ctx);
+#endif
+	}
     sha256::encoder::encoder() {
       reset();
     }
@@ -54,15 +67,30 @@ namespace fc {
     }
 
     void sha256::encoder::write( const char* d, uint32_t dlen ) {
-      SHA256_Update( &my->ctx, d, dlen); 
+#ifdef USE_SM_CRYPTO
+		EVP_DigestUpdate(my->ctx, d, dlen);
+#else
+		SHA256_Update( &my->ctx, d, dlen);
+#endif
     }
     sha256 sha256::encoder::result() {
       sha256 h;
+#ifdef USE_SM_CRYPTO
+	  unsigned int data_len;
+	  EVP_DigestFinal_ex(my->ctx, (uint8_t*)h.data(), &data_len);
+#else
       SHA256_Final((uint8_t*)h.data(), &my->ctx );
+#endif
       return h;
     }
     void sha256::encoder::reset() {
-      SHA256_Init( &my->ctx);  
+#ifdef USE_SM_CRYPTO
+		const EVP_MD* md = EVP_get_digestbyname(SN_sm3);
+		my->ctx = EVP_MD_CTX_new();
+		EVP_DigestInit_ex(my->ctx, md, NULL);
+#else
+		SHA256_Init( &my->ctx);
+#endif
     }
 
     sha256 operator << ( const sha256& h1, uint32_t i ) {
