@@ -1,6 +1,14 @@
 #pragma once
 #include <fc/thread/thread.hpp>
-#include <boost/context/all.hpp>
+#include <boost/context/continuation.hpp>
+#include <boost/context/fiber.hpp>
+#include <boost/context/fixedsize_stack.hpp>
+#include <boost/context/execution_context.hpp>
+#include <boost/context/pooled_fixedsize_stack.hpp>
+#include <boost/context/protected_fixedsize_stack.hpp>
+#include <boost/context/segmented_stack.hpp>
+#include <boost/context/stack_context.hpp>
+#include <boost/context/stack_traits.hpp>
 #include <fc/exception/exception.hpp>
 #include <vector>
 
